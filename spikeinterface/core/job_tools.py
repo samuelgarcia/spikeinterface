@@ -48,7 +48,7 @@ def divide_segment_into_chunks(num_frames, chunk_size):
     return chunks
 
 
-def devide_recording_into_chunks(recording, chunk_size):
+def divide_recording_into_chunks(recording, chunk_size):
     all_chunks = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
@@ -200,6 +200,7 @@ class ChunkRecordingExecutor:
         self.chunk_size = ensure_chunk_size(recording,
                                             total_memory=total_memory, chunk_size=chunk_size,
                                             chunk_memory=chunk_memory, n_jobs=self.n_jobs)
+
         self.job_name = job_name
 
         if verbose:
@@ -209,7 +210,7 @@ class ChunkRecordingExecutor:
         """
         Runs the defined jobs.
         """
-        all_chunks = devide_recording_into_chunks(self.recording, self.chunk_size)
+        all_chunks = divide_recording_into_chunks(self.recording, self.chunk_size)
 
         if self.handle_returns:
             returns = []

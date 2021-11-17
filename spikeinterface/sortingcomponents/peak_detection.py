@@ -173,7 +173,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # load trace in memory
     #~ traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     recording_segment = recording._recording_segments[segment_index]
-    traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame, None, margin, add_zeros=True)
+    traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame, slice(None), margin, add_zeros=True)
 
     if extra_margin > 0:
         # remove extra margin for detection step
