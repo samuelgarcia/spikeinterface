@@ -16,6 +16,41 @@ from ..toolkit import get_chunk_with_margin
 
 from .peak_localization import dtype_localize_by_method, localize_peaks_center_of_mass, localize_peaks_monopolar_triangulation
 
+
+def select_peaks(peaks, method='random', max_peaks_per_channel=1000, noise_levels=None, n_bins=100):
+
+    selected_peaks = []
+    peaks_indices = {}
+
+    for channel in np.unique(peaks['channel_ind']):
+        peaks_indices[channel] = np.where(peaks['channel_ind'] == channel)[0]
+
+    if method == 'random':
+        for channel in np.unique(peaks['channel_ind']):
+            selected_peaks += [np.random.permutation(peaks_indices[channel])[:max_peaks_per_channel]]
+    elif method == 'smart_sampling':
+
+        assert noise_levels is not None
+
+        histograms = {}
+        for channel in np.unique(peaks['channel_ind']):
+            bins = list(np.linspace(peaks['amplitude'].min(), noise_levels[channel], n_bins))
+            bins = [-np.inf] + bins + [np.inf]
+            x, y = np.histogram(peaks['amplitude'][peaks_indices[channel]], bins=bins)
+            histograms[channel] = {'probability' : x/x.sum(), 'amplitudes' : y[1:]}
+
+            amplitudes = peaks['amplitude'][peaks_indices[channel]]
+            indices = np.searchsorted(histograms[channel]['amplitudes'], amplitudes)
+            acceptation_threshold = histograms[channel]['probability'][indices]
+            valid_indices = acceptation_threshold > np.random.rand(len(indices))
+            selected_peaks += [peaks_indices[channel][valid_indices]]
+
+    selected_peaks = peaks[np.concatenate(selected_peaks)]
+    selected_peaks = selected_peaks[np.argsort(selected_peaks['sample_ind'])]
+
+    return selected_peaks
+
+
 def detect_peaks(recording, method='by_channel',
                  peak_sign='neg', detect_threshold=5, n_shifts=2,
                  local_radius_um=100,
