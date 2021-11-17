@@ -7,11 +7,12 @@ import scipy.optimize
 
 from ..toolkit import get_chunk_with_margin
 
-_possible_localization_methods = ('center_of_mass', 'monopolar_triangulation')
+_possible_localization_methods = ('center_of_mass', 'monopolar_triangulation', 'random_projection')
 
 dtype_localize_by_method = {
     'center_of_mass':  [('x', 'float64'), ('z', 'float64')],
     'monopolar_triangulation': [('x', 'float64'),  ('z', 'float64'), ('y', 'float64'), ('alpha', 'float64')],
+    'center_of_mass_denoised' : [('x', 'float64'), ('z', 'float64')]
 }
 
 _possible_localization_methods = list(dtype_localize_by_method.keys())
@@ -72,7 +73,7 @@ def localize_peaks(recording, peaks, method='center_of_mass',
     margin = max(nbefore, nafter)
 
     # TODO
-    #  make a memmap for peaks to avoid serilisation
+    # make a memmap for peaks to avoid serilisation
 
     # and run
     func = _localize_peaks_chunk
@@ -142,6 +143,12 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         peak_locations = localize_peaks_center_of_mass(traces, local_peaks, contact_locations, neighbours_mask)
     elif method == 'monopolar_triangulation':
         peak_locations = localize_peaks_monopolar_triangulation(traces, local_peaks, contact_locations, neighbours_mask, nbefore, nafter)
+    elif method == 'center_of_mass_denoised':
+        window = np.arange(-nbefore, nafter)
+        nb_samples = len(window)
+        hanning = np.hanning(nb_samples)
+        hanning /= hanning.sum()
+        peak_locations = localize_peaks_center_of_mass_denoised(traces, local_peaks, contact_locations, neighbours_mask, window, hanning)
 
     return peak_locations
 
@@ -149,7 +156,7 @@ def _localize_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
 def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbours_mask):
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['center_of_mass'])
 
-    # TODO find something faster
+    #TODO find something faster
     for i, peak in enumerate(local_peak):
         chan_mask = neighbours_mask[peak['channel_ind'], :]
         chan_inds, = np.nonzero(chan_mask)
@@ -158,11 +165,30 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
         amps = traces[peak['sample_ind'], chan_inds]
         amps = np.abs(amps)
         com = np.sum(amps[:, np.newaxis] * contact_locations[chan_inds, :], axis=0) / np.sum(amps)
+        peak_locations['x'][i] = com[0]
+        peak_locations['z'][i] = com[1]
+    return peak_locations
 
+def localize_peaks_center_of_mass_denoised(traces, local_peak, contact_locations, neighbours_mask, window, hanning):
+    
+    peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['center_of_mass'])
+
+    #TODO find something faster
+    for i, peak in enumerate(local_peak):
+        chan_mask = neighbours_mask[peak['channel_ind'], :]
+        chan_inds, = np.nonzero(chan_mask)
+
+        # TODO find the max between nbefore/nafter
+        amps = traces[peak['sample_ind']+window][:, chan_inds] * hanning[:, np.newaxis]
+        amps = np.abs(amps)
+        com = np.dot(amps, contact_locations[chan_inds, :]).sum(0) / np.sum(amps)
         peak_locations['x'][i] = com[0]
         peak_locations['z'][i] = com[1]
 
     return peak_locations
+
+
+
 
 
 def _minimize_dist(vec, wf_ptp, local_contact_locations):
