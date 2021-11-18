@@ -17,7 +17,7 @@ from ..toolkit import get_chunk_with_margin
 from .peak_localization import dtype_localize_by_method, localize_peaks_center_of_mass, localize_peaks_monopolar_triangulation
 
 
-def select_peaks(peaks, method='random', max_peaks_per_channel=1000, noise_levels=None, n_bins=100):
+def select_peaks(peaks, method='random', max_peaks_per_channel=1000, **method_kwargs):
 
     selected_peaks = []
     peaks_indices = {}
@@ -30,21 +30,38 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, noise_level
             selected_peaks += [np.random.permutation(peaks_indices[channel])[:max_peaks_per_channel]]
     elif method == 'smart_sampling':
 
-        assert noise_levels is not None
+        params = {'detect_threshold' : 5, 
+                  'peak_sign' : 'neg',
+                  'n_bins' : 100}
+
+        params.update(method_kwargs)
+        assert 'noise_levels' in params
+
+        abs_threholds = params['noise_levels']*params['detect_threshold']
 
         import scipy
 
-        def reject_rate(x, d, target):
-            return (np.mean(len(bins)*a*np.clip(1 - d*x, 0, 1)) - target)**2
+        def reject_rate(x, d, target, n_bins):
+            return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
 
         histograms = {}
         for channel in np.unique(peaks['channel_ind']):
-            bins = list(np.linspace(peaks['amplitude'].min(), noise_levels[channel], n_bins))
-            bins = [-np.inf] + bins + [np.inf]
-            x, y = np.histogram(peaks['amplitude'][peaks_indices[channel]], bins=bins)
+
+            sub_peaks = peaks[peaks_indices[channel]]
+
+            if params['peak_sign'] == 'neg':
+                bins = list(np.linspace(sub_peaks['amplitude'].min(), -abs_threholds[channel], params['n_bins']))
+            elif params['peak_sign'] == 'pos':
+                bins = list(abs_threholds[channel], np.linspace(sub_peaks['amplitude'].max(), params['n_bins']))
+            elif params['peak_sign'] == 'both':
+                pos_values = list(abs_threholds[channel], np.linspace(sub_peaks['amplitude'].max(), params['n_bins']//2))
+                neg_values = list(np.linspace(sub_peaks['amplitude'].min(), -abs_threholds[channel], params['n_bins']//2))
+                bins = neg_values + pos_values
+
+            x, y = np.histogram(sub_peaks['amplitude'], bins=bins)
             histograms[channel] = {'probability' : x/x.sum(), 'amplitudes' : y[1:]}
 
-            amplitudes = peaks['amplitude'][peaks_indices[channel]]
+            amplitudes = sub_peaks['amplitude']
             indices = np.searchsorted(histograms[channel]['amplitudes'], amplitudes)
 
             a = histograms[channel]['probability']
@@ -58,7 +75,7 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, noise_level
             factor = twist * c
 
             target_rejection = 1 - max_peaks_per_channel/len(indices)
-            res = scipy.optimize.fmin(reject_rate, factor, args=(d, target_rejection), disp=False)
+            res = scipy.optimize.fmin(reject_rate, factor, args=(d, target_rejection, params['n_bins']), disp=False)
             rejection_curve = np.clip(1 - d*res[0], 0, 1)
 
             acceptation_threshold = rejection_curve[indices]
