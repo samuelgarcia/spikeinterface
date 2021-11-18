@@ -17,10 +17,13 @@ from ..toolkit import get_chunk_with_margin
 from .peak_localization import dtype_localize_by_method, localize_peaks_center_of_mass, localize_peaks_monopolar_triangulation
 
 
-def select_peaks(peaks, method='random', max_peaks_per_channel=1000, **method_kwargs):
+def select_peaks(peaks, method='random', max_peaks_per_channel=1000, seed=None, **method_kwargs):
 
     selected_peaks = []
     peaks_indices = {}
+
+    if seed is not None:
+        np.random.seed(seed)
 
     for channel in np.unique(peaks['channel_ind']):
         peaks_indices[channel] = np.where(peaks['channel_ind'] == channel)[0]
@@ -32,7 +35,7 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, **method_kw
 
         params = {'detect_threshold' : 5, 
                   'peak_sign' : 'neg',
-                  'n_bins' : 100}
+                  'n_bins' : 50}
 
         params.update(method_kwargs)
         assert 'noise_levels' in params
