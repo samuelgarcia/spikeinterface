@@ -7,7 +7,7 @@ import scipy.optimize
 
 from ..toolkit import get_chunk_with_margin
 
-_possible_localization_methods = ('center_of_mass', 'monopolar_triangulation', 'random_projection')
+_possible_localization_methods = ('center_of_mass', 'monopolar_triangulation', 'center_of_mass_denoised')
 
 dtype_localize_by_method = {
     'center_of_mass':  [('x', 'float64'), ('z', 'float64')],
@@ -172,7 +172,7 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
 def localize_peaks_center_of_mass_denoised(traces, local_peak, contact_locations, neighbours_mask, window, hanning):
     
     peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['center_of_mass'])
-
+    
     #TODO find something faster
     for i, peak in enumerate(local_peak):
         chan_mask = neighbours_mask[peak['channel_ind'], :]
@@ -186,10 +186,6 @@ def localize_peaks_center_of_mass_denoised(traces, local_peak, contact_locations
         peak_locations['z'][i] = com[1]
 
     return peak_locations
-
-
-
-
 
 def _minimize_dist(vec, wf_ptp, local_contact_locations):
     # vec dims ar (x, z, y, amplitude_factor)

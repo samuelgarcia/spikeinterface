@@ -32,6 +32,11 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, noise_level
 
         assert noise_levels is not None
 
+        import scipy
+
+        def reject_rate(x, d, target):
+            return (np.mean(len(bins)*a*np.clip(1 - d*x, 0, 1)) - target)**2
+
         histograms = {}
         for channel in np.unique(peaks['channel_ind']):
             bins = list(np.linspace(peaks['amplitude'].min(), noise_levels[channel], n_bins))
@@ -41,8 +46,23 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, noise_level
 
             amplitudes = peaks['amplitude'][peaks_indices[channel]]
             indices = np.searchsorted(histograms[channel]['amplitudes'], amplitudes)
-            acceptation_threshold = histograms[channel]['probability'][indices]
-            valid_indices = acceptation_threshold > np.random.rand(len(indices))
+
+            a = histograms[channel]['probability']
+            z = a[a > 0]
+            c = 1.0 / np.min(z)
+            d = np.ones(len(a))
+            d[a > 0] = 1. / (c * a[a > 0])
+            d = np.minimum(1, d)
+            d /= np.sum(d)
+            twist = np.sum(a * d)
+            factor = twist * c
+
+            target_rejection = 1 - max_peaks_per_channel/len(indices)
+            res = scipy.optimize.fmin(reject_rate, factor, args=(d, target_rejection), disp=False)
+            rejection_curve = np.clip(1 - d*res[0], 0, 1)
+
+            acceptation_threshold = rejection_curve[indices]
+            valid_indices = acceptation_threshold < np.random.rand(len(indices))
             selected_peaks += [peaks_indices[channel][valid_indices]]
 
     selected_peaks = peaks[np.concatenate(selected_peaks)]
