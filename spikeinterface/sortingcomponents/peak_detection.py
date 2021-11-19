@@ -44,7 +44,7 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, seed=None, 
 
         import scipy
 
-        def reject_rate(x, d, target, n_bins):
+        def reject_rate(x, d, a, target, n_bins):
             return (np.mean(n_bins*a*np.clip(1 - d*x, 0, 1)) - target)**2
 
         histograms = {}
@@ -57,8 +57,14 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, seed=None, 
             elif params['peak_sign'] == 'pos':
                 bins = list(abs_threholds[channel], np.linspace(sub_peaks['amplitude'].max(), params['n_bins']))
             elif params['peak_sign'] == 'both':
-                pos_values = list(abs_threholds[channel], np.linspace(sub_peaks['amplitude'].max(), params['n_bins']//2))
-                neg_values = list(np.linspace(sub_peaks['amplitude'].min(), -abs_threholds[channel], params['n_bins']//2))
+                if sub_peaks['amplitude'].max() > abs_threholds[channel]:
+                    pos_values = list(abs_threholds[channel], np.linspace(sub_peaks['amplitude'].max(), params['n_bins']//2))
+                else:
+                    pos_values = []
+                if sub_peaks['amplitude'].min() < -abs_threholds[channel]:
+                    neg_values = list(np.linspace(sub_peaks['amplitude'].min(), -abs_threholds[channel], params['n_bins']//2))
+                else:
+                    neg_values = []
                 bins = neg_values + pos_values
 
             x, y = np.histogram(sub_peaks['amplitude'], bins=bins)
@@ -67,18 +73,18 @@ def select_peaks(peaks, method='random', max_peaks_per_channel=1000, seed=None, 
             amplitudes = sub_peaks['amplitude']
             indices = np.searchsorted(histograms[channel]['amplitudes'], amplitudes)
 
-            a = histograms[channel]['probability']
-            z = a[a > 0]
+            probabilities = histograms[channel]['probability']
+            z = probabilities[probabilities > 0]
             c = 1.0 / np.min(z)
-            d = np.ones(len(a))
-            d[a > 0] = 1. / (c * a[a > 0])
+            d = np.ones(len(probabilities))
+            d[probabilities > 0] = 1. / (c * z)
             d = np.minimum(1, d)
             d /= np.sum(d)
-            twist = np.sum(a * d)
+            twist = np.sum(probabilities * d)
             factor = twist * c
 
             target_rejection = 1 - max_peaks_per_channel/len(indices)
-            res = scipy.optimize.fmin(reject_rate, factor, args=(d, target_rejection, params['n_bins']), disp=False)
+            res = scipy.optimize.fmin(reject_rate, factor, args=(d, probabilities, target_rejection, params['n_bins']), disp=False)
             rejection_curve = np.clip(1 - d*res[0], 0, 1)
 
             acceptation_threshold = rejection_curve[indices]
