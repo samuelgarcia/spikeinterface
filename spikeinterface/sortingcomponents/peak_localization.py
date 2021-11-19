@@ -7,12 +7,12 @@ import scipy.optimize
 
 from ..toolkit import get_chunk_with_margin
 
-_possible_localization_methods = ('center_of_mass', 'monopolar_triangulation', 'center_of_mass_denoised')
+_possible_localization_methods = ('center_of_mass', 'monopolar_triangulation', 'center_of_mass_smoothed')
 
 dtype_localize_by_method = {
     'center_of_mass':  [('x', 'float64'), ('z', 'float64')],
     'monopolar_triangulation': [('x', 'float64'),  ('z', 'float64'), ('y', 'float64'), ('alpha', 'float64')],
-    'center_of_mass_denoised' : [('x', 'float64'), ('z', 'float64')]
+    'center_of_mass_smoothed' : [('x', 'float64'), ('z', 'float64')]
 }
 
 _possible_localization_methods = list(dtype_localize_by_method.keys())
@@ -169,9 +169,9 @@ def localize_peaks_center_of_mass(traces, local_peak, contact_locations, neighbo
         peak_locations['z'][i] = com[1]
     return peak_locations
 
-def localize_peaks_center_of_mass_denoised(traces, local_peak, contact_locations, neighbours_mask, window, hanning):
+def localize_peaks_center_of_mass_smoothed(traces, local_peak, contact_locations, neighbours_mask, window, hanning):
     
-    peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['center_of_mass'])
+    peak_locations = np.zeros(local_peak.size, dtype=dtype_localize_by_method['center_of_mass_smoothed'])
     
     #TODO find something faster
     for i, peak in enumerate(local_peak):
