@@ -356,7 +356,7 @@ class LocalizeGridConvolution(PipelineNode):
         radius_um=40.0,
         upsampling_um=5.0,
         sigma_ms=0.25,
-        margin_um=50.0,
+        margin_um=30.0,
         prototype=None,
         percentile=5.0,
         peak_sign="neg",

@@ -2,12 +2,12 @@
 # jupyter:
 #   jupytext:
 #     cell_metadata_filter: -all
-#     formats: py,ipynb
+#     formats: py:light,ipynb
 #     text_representation:
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.6
+#       jupytext_version: 1.16.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -70,6 +70,7 @@ raw_rec
 
 
 def preprocess_chain(rec):
+    rec = rec.astype('float32')
     rec = si.bandpass_filter(rec, freq_min=300.0, freq_max=6000.0)
     rec = si.common_reference(rec, reference="global", operator="median")
     return rec
@@ -95,8 +96,9 @@ from spikeinterface.preprocessing.motion import motion_options_preset
 motion_options_preset["kilosort_like"]
 
 # lets try theses 3 presets
-some_presets = ("rigid_fast", "kilosort_like", "nonrigid_accurate")
-# some_presets = ('kilosort_like',  )
+some_presets = ("rigid_fast", "kilosort_like", "dredge", "nonrigid_accurate", "nonrigid_fast_and_accurate")
+some_presets = ('dredge',  )
+
 
 # compute motion with 3 presets
 for preset in some_presets:
@@ -104,8 +106,8 @@ for preset in some_presets:
     folder = base_folder / "motion_folder_dataset1" / preset
     if folder.exists():
         shutil.rmtree(folder)
-    recording_corrected, motion_info = si.correct_motion(
-        rec, preset=preset, folder=folder, output_motion_info=True, **job_kwargs
+    recording_corrected, motion, motion_info = si.correct_motion(
+        rec, preset=preset, folder=folder, output_motion=True, output_motion_info=True, **job_kwargs
     )
 
 # ### Plot the results
@@ -140,8 +142,8 @@ for preset in some_presets:
 
     # and plot
     fig = plt.figure(figsize=(14, 8))
-    si.plot_motion(
-        motion_info,
+    si.plot_motion_info(
+        motion_info, rec,
         figure=fig,
         depth_lim=(400, 600),
         color_amplitude=True,
@@ -173,6 +175,8 @@ for preset in some_presets:
     folder = base_folder / "motion_folder_dataset1" / preset
     motion_info = si.load_motion_info(folder)
 
+    motion = motion_info["motion"]
+
     fig, axs = plt.subplots(ncols=2, figsize=(12, 8), sharey=True)
 
     ax = axs[0]
@@ -190,24 +194,16 @@ for preset in some_presets:
 
     color_kargs = dict(alpha=0.2, s=2, c=c)
 
-    loc = motion_info["peak_locations"]
+    peak_locations = motion_info["peak_locations"]
     # color='black',
-    ax.scatter(loc["x"][mask][sl], loc["y"][mask][sl], **color_kargs)
+    ax.scatter(peak_locations["x"][mask][sl], peak_locations["y"][mask][sl], **color_kargs)
 
-    loc2 = correct_motion_on_peaks(
-        motion_info["peaks"],
-        motion_info["peak_locations"],
-        rec.sampling_frequency,
-        motion_info["motion"],
-        motion_info["temporal_bins"],
-        motion_info["spatial_bins"],
-        direction="y",
-    )
+    peak_locations2 = correct_motion_on_peaks(peaks, peak_locations, motion,rec)
 
     ax = axs[1]
     si.plot_probe_map(rec, ax=ax)
     #  color='black',
-    ax.scatter(loc2["x"][mask][sl], loc2["y"][mask][sl], **color_kargs)
+    ax.scatter(peak_locations2["x"][mask][sl], peak_locations2["y"][mask][sl], **color_kargs)
 
     ax.set_ylim(400, 600)
     fig.suptitle(f"{preset=}")
@@ -236,3 +232,5 @@ for k in keys:
     bottom += rtimes
 ax.legend()
 # -
+
+
