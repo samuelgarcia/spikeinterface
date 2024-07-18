@@ -230,7 +230,7 @@ motion_options_preset = {
 
 def correct_motion(
     recording,
-    preset="nonrigid_accurate",
+    preset="dredge",
     folder=None,
     output_motion=False,
     output_motion_info=False,

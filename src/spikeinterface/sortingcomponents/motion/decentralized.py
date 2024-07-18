@@ -197,6 +197,7 @@ class DecentralizedRegistration:
             if verbose:
                 print(f"Computing pairwise displacement: {i + 1} / {len(non_rigid_windows)}")
 
+            
             pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(
                 motion_histogram[:, window_slice],
                 bin_um,
@@ -363,6 +364,7 @@ def compute_pairwise_displacement(
         correlation = np.empty((size, size), dtype=motion_hist.dtype)
 
         for i in xrange(0, size, batch_size):
+            print('yep', i, size, conv_engine, motion_hist_engine.shape)
             corr = normxcorr1d(
                 motion_hist_engine,
                 motion_hist_engine[i : i + batch_size],
@@ -741,7 +743,10 @@ def compute_global_displacement(
 #     corr : tensor
 #     """
 #     if conv_engine == "torch":
-#         assert HAVE_TORCH
+#         import torch
+#         import torch.nn.functional as F
+        
+#         # assert HAVE_TORCH
 #         conv1d = F.conv1d
 #         npx = torch
 #     elif conv_engine == "numpy":

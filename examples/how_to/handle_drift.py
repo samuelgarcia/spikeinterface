@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.16.2
+#       jupytext_version: 1.16.3
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -95,12 +95,14 @@ from spikeinterface.preprocessing.motion import motion_options_preset
 
 motion_options_preset["kilosort_like"]
 
-# lets try theses 3 presets
-some_presets = ("rigid_fast", "kilosort_like", "dredge", "nonrigid_accurate", "nonrigid_fast_and_accurate")
-some_presets = ('dredge',  )
+# lets try theses 5 presets
+some_presets = ("rigid_fast", "kilosort_like",  "nonrigid_accurate", "nonrigid_fast_and_accurate", "dredge",)
+some_presets = ("nonrigid_accurate", "nonrigid_fast_and_accurate", "dredge",)
+some_presets = ("rigid_fast", "kilosort_like",  "nonrigid_accurate",)
 
 
-# compute motion with 3 presets
+
+# compute motion with theses presets
 for preset in some_presets:
     print("Computing with", preset)
     folder = base_folder / "motion_folder_dataset1" / preset
@@ -129,11 +131,15 @@ for preset in some_presets:
 #   The motion vector is computed for different depths.
 #   The corrected peak locations are flatter than the rigid case.
 #   The motion vector map is still be a bit noisy at some depths (e.g around 1000um).
-# * The preset **nonrigid_accurate** seems to give the best results on this recording.
+# * The preset **nonrigid_accurate** this is the legacy "dredge" before was published.
+#   It seems to give the good results on this recording.
 #   The motion vector seems less noisy globally, but it is not "perfect" (see at the top of the probe 3200um to 3800um).
 #   Also note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
 #   the upper part of the probe (2000-3000um) experience some drifts, but the lower part (0-1000um) is relatively stable.
 #   The method defined by this preset is able to capture this.
+# * The preset **nonrigid_fast_and_accurate**
+#   It is very similar than **nonrigid_accurate**, it use a faster peak location estimation.
+# * The preset **dredge** give very very similar results than **nonrigid_accurate** but it is quite faster.
 
 for preset in some_presets:
     # load
@@ -224,7 +230,7 @@ for preset in some_presets:
 keys = run_times[0].keys()
 
 bottom = np.zeros(len(run_times))
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(12, 6))
 for k in keys:
     rtimes = np.array([rt[k] for rt in run_times])
     if np.any(rtimes > 0.0):
