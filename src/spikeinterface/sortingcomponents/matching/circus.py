@@ -199,7 +199,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
         assert self.stop_criteria in ["max_failures", "omp_min_sps", "relative_error"]
 
-        sparsity = self.templates.sparsity.mask
+        if self.templates.sparsity is not None:
+            sparsity = self.templates.sparsity.mask
+        else:
+            sparsity = np.ones((self.num_templates, self.num_channels), dtype=bool)
 
         units_overlaps = np.sum(np.logical_and(sparsity[:, np.newaxis, :], sparsity[np.newaxis, :, :]), axis=2)
         self.units_overlaps = units_overlaps > 0

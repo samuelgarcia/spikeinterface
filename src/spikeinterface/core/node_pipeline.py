@@ -550,7 +550,8 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
                 trace_detection = traces_chunk
             node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
             # set sample index to local
-            node_output[0]["sample_index"] += extra_margin
+            if len(node_output[0]) > 0:
+                node_output[0]["sample_index"] += extra_margin
         elif isinstance(node, PeakSource):
             node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
         else:
