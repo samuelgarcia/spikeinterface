@@ -34,22 +34,25 @@ class IterativeISOSPLITClustering:
         "seed": None,
         "peaks_svd": {"n_components": 5, "ms_before": 0.5, "ms_after": 1.5, "radius_um": 120.0, "motion": None},
         "split": {
-            "split_radius_um": 40.0,
+            # "split_radius_um": 40.0,
+            "split_radius_um": 60.0,
             "recursive": True,
             "recursive_depth": 5,
             "method_kwargs": {
                 "clusterer": {
                     "method": "isosplit",
+                    # "method": "isosplit6",
                     "n_init": 50,
                     "min_cluster_size": 10,
                     "max_iterations_per_pass": 500,
                     "isocut_threshold": 2.0,
                 },
                 "min_size_split": 25,
-                "n_pca_features": 3,
+                # "n_pca_features": 3,
+                "n_pca_features": 10,
 
-                # "projection_mode": "tsvd",
-                "projection_mode": "pca",
+                "projection_mode": "tsvd",
+                # "projection_mode": "pca",
             },
         },
         "merge_from_templates": {
