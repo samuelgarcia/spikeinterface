@@ -622,6 +622,7 @@ def run_node_pipeline(
         need_shallow_copy = True
     else:
         need_shallow_copy = False
+    print(need_shallow_copy)
     init_args = (recording, nodes, need_shallow_copy, skip_after_n_peaks_per_worker)
 
     processor = ChunkRecordingExecutor(
@@ -646,7 +647,8 @@ def _init_peak_pipeline(recording, nodes, need_shallow_copy, skip_after_n_peaks_
     worker_ctx = {}
     worker_ctx["recording"] = recording
     if need_shallow_copy:
-        nodes = [copy.copy(node) for node in nodes]
+        pass
+        #nodes = [copy.copy(node) for node in nodes]
     worker_ctx["nodes"] = nodes
     worker_ctx["max_margin"] = max(node.get_trace_margin() for node in nodes)
     worker_ctx["skip_after_n_peaks_per_worker"] = skip_after_n_peaks_per_worker

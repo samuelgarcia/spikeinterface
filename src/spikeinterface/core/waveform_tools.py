@@ -645,18 +645,24 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
     l1 = i1 + s0
 
     if l1 > l0:
-        start = spikes[l0]["sample_index"] - nbefore
-        end = spikes[l1 - 1]["sample_index"] + nafter
+        start_samples = spikes[l0:l1]["sample_index"] - nbefore
+        end_samples = spikes[l0:l1]["sample_index"] + nafter
+        start = start_samples[0]
+        end = end_samples[-1]
 
         # load trace in memory
         traces = recording.get_traces(
             start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
 
-        for spike_index in range(l0, l1):
-            sample_index = spikes[spike_index]["sample_index"]
-            unit_index = spikes[spike_index]["unit_index"]
-            wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
+        start_samples -= start
+        end_samples -= start
+
+        unit_indices = spikes[l0:l1]["unit_index"]
+        spike_indices = np.arange(l0, l1)
+
+        for start_sample, end_sample, spike_index, unit_index in zip(start_samples, end_samples, spike_indices, unit_indices):
+            wf = traces[start_sample:end_sample, :]
 
             if sparsity_mask is None:
                 all_waveforms[spike_index, :, :] = wf
@@ -1007,7 +1013,6 @@ def _init_worker_estimate_templates(
     worker_dict["sparsity_mask"] = sparsity_mask
 
     from multiprocessing.shared_memory import SharedMemory
-    import multiprocessing
 
     shm = SharedMemory(shm_name)
     waveform_accumulator_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
@@ -1061,24 +1066,29 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
     l1 = i1 + s0
 
     if l1 > l0:
-        start = spikes[l0]["sample_index"] - nbefore
-        end = spikes[l1 - 1]["sample_index"] + nafter
+
+        start_samples = spikes[l0:l1]["sample_index"] - nbefore
+        end_samples = spikes[l0:l1]["sample_index"] + nafter
+        start = start_samples[0]
+        end = end_samples[-1]
 
         # load trace in memory
         traces = recording.get_traces(
             start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
 
-        for spike_index in range(l0, l1):
-            sample_index = spikes[spike_index]["sample_index"]
-            unit_index = spikes[spike_index]["unit_index"]
-            wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
+        start_samples -= start
+        end_samples -= start
+
+        unit_indices = spikes["unit_index"][l0:l1]
+
+        for start_sample, end_sample, unit_index in zip(start_samples, end_samples, unit_indices):
+            wf = traces[start_sample:end_sample, :]
 
             if sparsity_mask is None:
                 waveform_accumulator_per_worker[worker_index, unit_index, :, :] += wf
                 if waveform_squared_accumulator_per_worker is not None:
                     waveform_squared_accumulator_per_worker[worker_index, unit_index, :, :] += wf**2
-
             else:
                 mask = sparsity_mask[unit_index, :]
                 wf = wf[:, mask]
