@@ -167,8 +167,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         include_multi_channel_metrics=False,
         depth_direction="y",
         min_thresh_detect_peaks_troughs=0.4,
-        smooth=True,
-        smooth_window_ms=0.3,
+        smooth=False,
+        smooth_window_ms=0.2,
         smooth_polyorder=3,
     ):
         # Auto-detect if multi-channel metrics should be included based on number of channels
